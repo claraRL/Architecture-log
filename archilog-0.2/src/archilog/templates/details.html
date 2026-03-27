@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Détails : {{ pot.name }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 40px auto;
+            line-height: 1.6;
+            max-width: 900px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            margin-top: 15px;
+            color: #2980b9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0; background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #eee;
+        }
+        th {
+            background-color: #f8f9fa;
+            color: #7f8c8d; text-transform: uppercase;
+            font-size: 0.9em;
+        }
+        tr:hover {
+            background-color: #fdfdfd;
+        }
+        .total-card {
+            background-color: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #eee;
+        }
+        .reimbursement-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: #fdfdfd;
+        }
+        .reimbursement-text {
+            color: #1f2c38;
+            opacity: 0.6;
+            font-weight: 300;
+            margin: 0 8px;
+        }
+
+        .name-debtor {
+            color: #c62828;
+            font-weight: 700;
+        }
+        .name-creditor {
+            color: #2e7d32;
+            font-weight: 700;
+        }
+        .amount-highlight {
+            color: #2c3e50;
+            font-weight: 900;
+            font-size: 1.2rem;
+        }
+
+        .summary-card {
+            background: #f0f7ff;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 6px solid #3498db;
+            margin: 30px 0;
+        }
+        .transaction-list {
+            list-style: none;
+            padding: 0;
+        }
+        .transaction-list li {
+            background: white;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .footer {
+            margin-top: 40px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+            padding-bottom: 20px;
+            display: contents;
+        }
+        .back-link {
+            text-decoration: none;
+            color: #3498db;
+            font-weight: bold;
+            padding-bottom: 40px;
+        }
+        #retour{
+            float: left;
+        }
+        #suppr{
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            float: right;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Cagnotte : {{ pot.name }}</h1>
+    <div class="total-card">
+    <h3>Résumé de la cagnotte</h3>
+        {% for e in list_m %}
+            <li>{{ e }}</li>
+        {% endfor %}
+        <p>Total dépensé : <strong>{{ total }} €</strong></p>
+        <p>Soit <strong>{{ part_individuelle }} €</strong> par personne (sur {{ nb_membres }} participants)</p>
+    </div>
+    <h2>Historique des transactions</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Date & Heure</th>
+                <th>Payé par</th>
+                <th>Montant</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in pot.expenses %}
+            <tr>
+                <td>{{ e.datetime.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td><strong>{{ e.paid_by }}</strong></td>
+                <td>{{ "%.2f"|format(e.amount) }} €</td>
+                <td>
+                    <form action="/expense/delete/{{ e.id }}" method="POST">
+                        <button type="submit" onclick="return confirm('Supprimer cette dépense ?')">Supprimer</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="summary-card">
+        <h2>Remboursements à prévoir</h2>
+        {% if transactions %}
+            <ul class="transaction-list">
+                {% for t in transactions %}
+                <li>
+                    <span class="name-debtor">{{ t.sender }}</span>
+                    <span class="reimbursement-text"> doit donner</span>
+                    <span class="amount-highlight">{{ "%.2f"|format(t.amount) }} €</span> à
+                    <span class="name-creditor">{{ t.receiver }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>Tout le monde a payé la même chose, les comptes sont parfaits !</p>
+        {% endif %}
+    </div>
+    <div class="summary-card">
+    <h2>Ajouter une dépense</h2>
+    <form action="/pot/{{ pot.name }}/add" method="post">
+        <!-- Liste déroulante des membres pour éviter les fautes de frappe -->
+        <label for="paid_by">Qui a payé ?</label>
+        <select name="paid_by" id="paid_by" required>
+            {% for membre in membres %}
+                <option value="{{ membre }}">{{ membre }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="amount">Montant (€)</label>
+        <input type="number" name="amount" id="amount" step="0.01" min="0.01" required>
+
+        <button type="submit">Enregistrer</button>
+    </form>
+</div>
+
+    <div class="footer">
+        <a href="/" class="back-link" id="retour">← Retour à la liste des cagnottes</a>
+        <form action="/pot/delete/{{ pot.name }}" method="POST">
+            <button id="suppr" type="submit" onclick="return confirm('Supprimer cette cagnotte ?')">Supprimer la cagnotte</button>
+        </form>
+    </div>
+</body>
+</html>

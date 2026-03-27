@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mes Cagnottes</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        /* Style des cartes de cagnottes */
+        .pot-card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+        .pot-card:hover {
+            transform: scale(1.02);
+            border-left: 5px solid #007bff; }
+
+        .pot-info h3 {
+            margin: 0;
+            color: #007bff; }
+
+        .btn-open {
+            text-decoration: none;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .create-pot {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-top: 30px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #7f8c8d;
+            margin-top: 40px;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box; /* Pour que le padding ne dépasse pas */
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0,123,255,0.2);
+        }
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        /* Bouton secondaire (+ Ajouter un membre) */
+        button[type="button"] {
+            background-color: #f0f2f5;
+            color: #555;
+            padding: 8px 15px;
+            margin-bottom: 15px;
+        }
+
+        /* Bouton principal (Créer la cagnotte) */
+        button[type="submit"] {
+            background-color: #28a745; /* Vert pour la validation */
+            color: white;
+            width: 100%;
+            padding: 15px;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mes Cagnottes</h1>
+
+    <div class="pots-container">
+        {% if pots %}
+            {% for pot in pots %}
+            <div class="pot-card">
+                <div class="pot-info">
+                    <h3>{{ pot.name }}</h3>
+                    <small><span class="amount-highlight">{{ cagnottes.nb_depenses }}</span>
+                    <span class="reimbursement-text">dépense(s) enregistrée(s)</span></small>
+                </div>
+                <!-- C'est ce lien qui permet de "choisir" la cagnotte -->
+                <a href="{{ url_for('view_pot', name=pot.name) }}" class="btn-open">Ouvrir →</a>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <p>Vous n'avez pas encore de cagnotte.</p>
+                <p>Utilisez le formulaire pour créer votre première dépense !</p>
+            </div>
+        {% endif %}
+        <section class="create-pot">
+        <h2>Créer une nouvelle cagnotte</h2>
+            <form action="/pot/create" method="post">
+                <label for="pot_name">
+                    <input type="text" id="pot_name" name="pot_name" placeholder="Nom de la cagnotte" required>
+                </label>
+
+                <div id="members-list">
+                    <h3>Membres du groupe</h3>
+                    <!-- Le premier membre est souvent celui qui crée la cagnotte -->
+                    <label for="members[]">
+                        <input type="text" id="members[]" name="members[]" placeholder="Nom du membre" required>
+                    </label>
+                </div>
+
+                <button type="button" onclick="addMemberField()">+ Ajouter un membre</button>
+
+                <hr>
+                <h3>Première dépense </h3>
+                <label for="paid_by">
+                    <input type="text" id="paid_by" name="paid_by" placeholder="Qui a payé ?" required>
+                </label>
+                <label for="amount">
+                    <input type="number" id="amount" step="0.01" name="amount" placeholder="Montant (€)" required>
+                </label>
+                <button type="submit">Créer la cagnotte</button>
+            </form>
+        </section>
+        <script>
+            function addMemberField() {
+                const container = document.getElementById('members-list');
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.name = 'members[]'; // Les crochets [] permettent à Flask de recevoir une liste
+                input.placeholder = 'Nom du membre';
+                input.required = true;
+                container.appendChild(input);
+            }
+        </script>
+    </div>
+
+</body>
+</html>
