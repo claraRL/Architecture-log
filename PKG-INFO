@@ -1,3 +1,11 @@
+Metadata-Version: 2.3
+Name: archilog
+Version: 0.2
+Summary: A simple project for educational purpose.
+Requires-Dist: click>=8.3.1
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+
 # archilog
 
 A simple project for educational purpose.
