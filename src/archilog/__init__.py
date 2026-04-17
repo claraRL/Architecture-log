@@ -19,8 +19,9 @@ def create_app():
         ]
     )
 
-    from archilog.views import web_ui
+    from archilog.views import api,web_ui
     app.register_blueprint(web_ui)
+    app.register_blueprint(api, url_prefix="/api")
 
     # Gestion globale des erreurs 500
     @app.errorhandler(500)

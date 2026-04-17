@@ -1,6 +1,7 @@
 import logging
 from archilog.data import (
     create_expense,
+    create_money_pot,
     delete_money_pot,
     get_all_money_pots,
     add_members_to_pot,
@@ -9,10 +10,11 @@ from archilog.data import (
     get_expense_by_id,
 )
 from archilog.domain import get_money_pot_details
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from archilog.forms import ExpenseForm, MoneyPotForm
 
 web_ui = Blueprint("web_ui", __name__)
+api = Blueprint("api", __name__)
 
 @web_ui.route("/")
 def home():
@@ -42,11 +44,14 @@ def view_pot(name: str):
     total_amount = sum(elt.amount for elt in pot.expenses)
     nb_membres = len(liste_membres)
     part_individuelle = round(total_amount / nb_membres if nb_membres > 0 else 0, 2)
-    totaux_par_membre = {membre: 0.0 for membre in liste_membres}
-
-    for depense in pot.expenses:
-        if depense.paid_by in totaux_par_membre:
-            totaux_par_membre[depense.paid_by] += depense.amount
+    totaux_par_membre = {m: 0.0 for m in liste_membres}
+    for e in pot.expenses:
+        clean_name = e.paid_by.strip()
+        if clean_name in totaux_par_membre:
+            totaux_par_membre[clean_name] += e.amount
+        else:
+            # Si c'est un nom inconnu, on ne fait rien (cela évite le crash)
+            continue
 
     # AJOUT DU FORMULAIRE
     form = ExpenseForm()
@@ -85,18 +90,31 @@ def create_pot():
     form = MoneyPotForm()
     if form.validate_on_submit():
         # On récupère les données propres depuis le formulaire
-        pot_name = form.pot_name.data
-        paid_by = form.paid_by.data
+        pot_name = form.pot_name.data.strip()
+        paid_by = form.paid_by.data.strip()
         amount = form.amount.data
 
         # Les membres sont toujours récupérés via request car ils sont dynamiques en JS
-        members = request.form.getlist('members[]')
+        members_r = request.form.getlist('members[]')
 
-        create_expense(pot_name, paid_by, amount)
-        add_members_to_pot(pot_name, members)
+        # On crée une liste propre : sans espaces et sans doublons
+        # On ajoute le payeur à la liste des membres pour être sûr
+        members_list = [m.strip() for m in members_r if m.strip()]
+        members_list.append(paid_by)
 
-        logging.info(f"Cagnotte '{pot_name}' créée avec succès.")
-        return redirect(url_for("web_ui.view_pot", name=pot_name))
+        # On utilise set() pour supprimer les doublons (ex: si Harry était dans les deux)
+        members = list(set(members_list))
+
+        success = create_money_pot(pot_name)
+
+        if success:
+            add_members_to_pot(pot_name, members)
+            create_expense(pot_name, paid_by, amount)
+            flash(f"Cagnotte '{pot_name}' créée !", "success")
+            return redirect(url_for("web_ui.view_pot", name=pot_name))
+        else:
+            flash(f"La cagnotte '{pot_name}' existe déjà !", "error")
+            return redirect(url_for("web_ui.view_pot", name=pot_name))
 
     # Si la validation échoue (ex: nom trop court)
     flash("Erreur lors de la création : vérifiez les informations saisies.", "error")
@@ -124,20 +142,32 @@ def delete_pot(cagnotte_name):
 
 @web_ui.route("/pot/<name>/add_expense", methods=["POST"])
 def add_expense_route(name: str):
-    liste_membres = get_members(name)
     form = ExpenseForm()
+    liste_membres = get_members(name)
     form.paid_by.choices = [(m, m) for m in liste_membres]
-    if form.validate_on_submit():
-        # Données validées !
-        create_expense(name, form.paid_by.data, form.amount.data)
-        flash(f"Dépense de {form.amount.data}€ ajoutée !", "success")
-        return redirect(url_for("web_ui.view_pot", name=name))
 
-    # Si validation échoue
-    print(form.errors)
-    flash(f"Erreur : {form.errors.get('paid_by', ['Montant invalide'])[0]}", "error")
+    if form.validate_on_submit():
+        try:
+            # On tente d'exécuter la logique métier
+            create_expense(name, form.paid_by.data, form.amount.data)
+            flash("Dépense ajoutée !", "success")
+        except Exception as e:
+            # Si une erreur survient (ex: KeyError), on l'attrape ici
+            flash(f"Erreur technique : {str(e)}", "error")
+    else:
+        # Si le formulaire est invalide (ex: texte au lieu de nombre)
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"Erreur dans le champ {field} : {error}", "error")
+
     return redirect(url_for("web_ui.view_pot", name=name))
 
 @web_ui.route("/test-crash")
 def crash():
     return 1 / 0  # Division par zéro -> Erreur 500
+
+@api.route("/pots")
+def get_pots_json():
+    cagnottes = get_all_money_pots()
+    # On transforme les objets en liste de dictionnaires
+    return jsonify([{"name": c.name} for c in cagnottes])

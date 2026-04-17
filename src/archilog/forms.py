@@ -5,7 +5,10 @@ from wtforms.validators import DataRequired, NumberRange, Length
 class ExpenseForm(FlaskForm):
     # Validation syntaxique (FloatField) et sémantique (NumberRange > 0)
     paid_by = SelectField('Payé par', choices=[], validators=[DataRequired()])
-    amount = FloatField('Montant', validators=[DataRequired(), NumberRange(min=0.01)])
+    amount = FloatField('Montant', validators=[
+        DataRequired(message="Veuillez entrer un nombre"),
+        NumberRange(min=0.01, message="Le montant doit être supérieur à 0")
+    ])
 
 class MoneyPotForm(FlaskForm):
     pot_name = StringField('Nom de la cagnotte', validators=[DataRequired(), Length(min=3)])

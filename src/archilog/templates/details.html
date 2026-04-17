@@ -223,7 +223,7 @@
 
                 <br>
                 <label for="amount">Montant (€)</label>
-                {{ form.amount(id="amount", step="0.01", placeholder="0.00") }}
+               {{ form.amount(id="amount", type="number", step="0.01", min="0.01", placeholder="0,00") }}
 
                 <button type="submit">Enregistrer</button>
             </form>

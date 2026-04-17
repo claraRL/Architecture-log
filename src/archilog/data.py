@@ -1,14 +1,13 @@
+import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
+from sqlalchemy import insert
 from sqlalchemy import create_engine, Column, String, Float, DateTime, Table, MetaData, select, delete, Integer
+from archilog.config import config
 
-db_url = "data.db"
-# pour SQLlite
-SQLLite_DATABASE_URL = f"sqlite:///{db_url}"
-# pour PostgreSQL
-postgreSQL_DATABASE_URL = "postgresql://user:password@localhost/db"
 
-db = create_engine(SQLLite_DATABASE_URL, echo=True, future=True)
+db = create_engine(config.DATABASE_URL, echo=config.DEBUG, future=True)
+
 metadata = MetaData()
 
 Expenses = Table(
@@ -24,6 +23,12 @@ Members = Table(
     "members",
     metadata,
     Column("money_pot", String, primary_key=True),
+    Column("name", String, primary_key=True)
+)
+
+money_pot_table = Table(
+    "money_pots",
+    metadata,
     Column("name", String, primary_key=True)
 )
 
@@ -56,6 +61,24 @@ def init_database():
 
 # money pots
 # ==========
+
+def create_money_pot(name: str) -> bool:
+    """
+    Crée une nouvelle cagnotte.
+    Retourne True si créée, False si elle existait déjà.
+    """
+    # .prefix_with("OR IGNORE") est spécifique à SQLite pour éviter l'erreur UNIQUE
+    stmt = insert(money_pot_table).values(name=name).prefix_with("OR IGNORE")
+
+    try:
+        with db.connect() as conn:
+            with conn.begin():
+                result = conn.execute(stmt)
+                # Si rowcount > 0, c'est qu'une ligne a été créée
+                return int(result.rowcount) > 0
+    except Exception as e:
+        print(f"Erreur DB : {e}")
+        return False
 
 def get_money_pot(money_pot_name: str) -> MoneyPot:
     """
@@ -101,7 +124,7 @@ def get_all_money_pots() -> list[MoneyPot]:
             sqlite3.Error: En cas d'échec de la connexion ou de la requête SQL.
     """
 
-    all_money_pots = select(Expenses.c.money_pot).distinct()
+    all_money_pots = select(money_pot_table).distinct()
 
     with db.connect() as conn:
         results = conn.execute(all_money_pots)
@@ -241,13 +264,17 @@ def add_members_to_pot(money_pot_name: str, member_names: list[str]) -> None:
     """
     with db.connect() as conn:
         with conn.begin():
-            for name in member_names:
-                # On prépare l'insertion pour chaque membre
+            unique_members = set(member_names)
+            for name in unique_members:
                 stmt = Members.insert().values(
                     money_pot=money_pot_name,
                     name=name
                 )
-                conn.execute(stmt)
+                try:
+                    conn.execute(stmt)
+                except sqlite3.IntegrityError:
+                    # Si le membre existe déjà, on ne fait rien
+                    pass
 
 def get_members(money_pot_name: str) -> list[str]:
     """

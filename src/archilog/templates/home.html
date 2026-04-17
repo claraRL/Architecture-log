@@ -146,9 +146,10 @@
                 const container = document.getElementById('members-list');
                 const input = document.createElement('input');
                 input.type = 'text';
-                input.name = 'members[]'; // Les crochets [] permettent à Flask de recevoir une liste
+                input.name = 'members[]';
                 input.placeholder = 'Nom du membre';
                 input.required = true;
+                input.className = 'member-input';
                 container.appendChild(input);
             }
         </script>

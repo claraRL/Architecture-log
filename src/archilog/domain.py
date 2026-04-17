@@ -77,11 +77,16 @@ def compute_transactions(money_pot: MoneyPot, members: list[str]) -> list[Transa
     if not money_pot.expenses:
         return []
 
-    totals = {name: 0.0 for name in members}
+    totals = {name.strip(): 0.0 for name in members}
 
     # Ajout des dépenses réelles
     for e in money_pot.expenses:
-        totals[e.paid_by] += e.amount
+        payer_name = e.paid_by.strip()
+        if payer_name in totals:
+            totals[payer_name] += e.amount
+        else:
+            # Si le nom n'est pas dans la liste des membres, on l'ignore au lieu de planter
+            print(f"Attention: {payer_name} n'est pas un membre de la cagnotte.")
 
     # Calcul de la moyenne sur le nombre réel de membres
     total_general = sum(totals.values())
