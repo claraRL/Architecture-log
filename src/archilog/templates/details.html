@@ -120,19 +120,55 @@
             font-weight: bold;
             float: right;
         }
+        .summary-card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+        border: 1px solid #e1e8ed;
+        }
+
+        /* Style des badges Seb a payé 30€ */
+        .members-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        /* Transactions */
+        .transaction-list {
+            list-style: none;
+            padding: 0;
+        }
+        .transaction-list li {
+            background: #fff9db;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            border-left: 4px solid #fab005;
+        }
     </style>
 {% endblock %}
 
 {% block content %}
     <div class="pots-container">
         <h1>Cagnotte : {{ pot.name }}</h1>
-        <div class="total-card">
-        <h3>Résumé de la cagnotte</h3>
-            {% for e in list_m %}
-                <li>{{ e }}</li>
-            {% endfor %}
-            <p>Total dépensé : <strong>{{ total }} €</strong></p>
+        <div class="summary-card">
+            <h2>Résumé de la cagnotte</h2>
+
+            <p>Total dépensé : <strong>{{ total_general }} €</strong></p>
             <p>Soit <strong>{{ part_individuelle }} €</strong> par personne (sur {{ nb_membres }} participants)</p>
+            <div class="members-stats" style="margin-bottom: 20px;">
+                <ul style="list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 10px;">
+                    {% for membre, total_perso in totaux_par_membre.items() %}
+                        <li style="background: #f1f3f5; padding: 5px 12px; border-radius: 15px; font-size: 0.9em; border: 1px solid #dee2e6;">
+                            <strong>{{ membre }}</strong> : {{ "%.2f"|format(total_perso) }} €
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
         </div>
         <h2>Historique des transactions</h2>
         <table>
@@ -187,7 +223,7 @@
 
                 <br>
                 <label for="amount">Montant (€)</label>
-                {{ form.amount(id="amount", step="0.01") }}
+                {{ form.amount(id="amount", step="0.01", placeholder="0.00") }}
 
                 <button type="submit">Enregistrer</button>
             </form>
