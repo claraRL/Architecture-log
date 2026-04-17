@@ -12,11 +12,30 @@ from archilog.data import (
 from archilog.domain import get_money_pot_details
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from archilog.forms import ExpenseForm, MoneyPotForm
+from werkzeug.security import check_password_hash
+from archilog import auth, users, api_spec, auth_token
+from pydantic import BaseModel, Field
 
 web_ui = Blueprint("web_ui", __name__)
 api = Blueprint("api", __name__)
 
+
+class PotSchema(BaseModel):
+    name: str = Field(min_length=3, max_length=50, description="Nom de la cagnotte")
+
+@auth.verify_password
+def verify_password(username, password):
+    if username in users and check_password_hash(users[username]["password"], password):
+        return username
+    return None
+
+
+@auth.get_user_roles
+def get_user_roles(username):
+    return users.get(username, {}).get("roles", [])
+
 @web_ui.route("/")
+@auth.login_required
 def home():
     cagnottes = get_all_money_pots()
     cagnottes_avec_stats = []
@@ -36,6 +55,7 @@ def home():
     return render_template("home.html", pots=cagnottes, cagnottes=cagnottes_avec_stats, form=form)
 
 @web_ui.route("/pot/<name>")
+@auth.login_required
 def view_pot(name: str):
     pot, transactions = get_money_pot_details(name)
     liste_membres = get_members(name)
@@ -71,6 +91,7 @@ def view_pot(name: str):
 
 
 @web_ui.route("/pot/<name>/add", methods=["POST"])
+@auth.login_required
 def add_expense_to_pot(name: str):
     # On récupère les données envoyées par le formulaire
     paid_by = request.form.get("paid_by")
@@ -86,6 +107,7 @@ def add_expense_to_pot(name: str):
     return redirect(url_for("web_ui.view_pot", name=name))
 
 @web_ui.route("/pot/create", methods=["POST"])
+@auth.login_required(role="admin")
 def create_pot():
     form = MoneyPotForm()
     if form.validate_on_submit():
@@ -121,6 +143,7 @@ def create_pot():
     return redirect(url_for("web_ui.home"))
 
 @web_ui.route("/expense/delete/<int:expense_id>", methods=["POST"])
+@auth.login_required(role="admin")
 def delete_expense_route(expense_id: int):
     # On a besoin de savoir de quel pot vient la dépense pour pouvoir y retourner après la suppression.
     # On récupère donc l'info avant de supprimer.
@@ -134,6 +157,7 @@ def delete_expense_route(expense_id: int):
     return redirect(url_for("web_ui.view_pot", name=pot_name))
 
 @web_ui.route("/pot/delete/<cagnotte_name>", methods=["POST"])
+@auth.login_required(role="admin")
 def delete_pot(cagnotte_name):
     delete_money_pot(cagnotte_name)
 
@@ -141,6 +165,7 @@ def delete_pot(cagnotte_name):
 
 
 @web_ui.route("/pot/<name>/add_expense", methods=["POST"])
+@auth.login_required
 def add_expense_route(name: str):
     form = ExpenseForm()
     liste_membres = get_members(name)
@@ -163,11 +188,31 @@ def add_expense_route(name: str):
     return redirect(url_for("web_ui.view_pot", name=name))
 
 @web_ui.route("/test-crash")
+@auth.login_required(role="admin")
 def crash():
-    return 1 / 0  # Division par zéro -> Erreur 500
+    return 1 / 0  # Division par zéro → Erreur 500
 
-@api.route("/pots")
-def get_pots_json():
+
+@api.get("/pots")
+@api_spec.validate(tags=["api"])
+@auth_token.login_required
+def get_pots():
+    """Read: Liste toutes les cagnottes"""
     cagnottes = get_all_money_pots()
-    # On transforme les objets en liste de dictionnaires
     return jsonify([{"name": c.name} for c in cagnottes])
+
+@api.post("/pots")
+@api_spec.validate(json=PotSchema, tags=["api"], security={"bearer_token": []})
+@auth_token.login_required(role="admin")
+def post_pot(json: PotSchema):
+    """Create: Crée une nouvelle cagnotte"""
+    create_money_pot(json.name)
+    return {"message": f"Cagnotte '{json.name}' créée avec succès"}, 201
+
+@api.delete("/pots/<name>")
+@api_spec.validate(tags=["api"])
+@auth_token.login_required(role="admin")
+def delete_pot_api(name: str):
+    """Delete: Supprimer une cagnotte"""
+    delete_money_pot(name)
+    return {"message": "Cagnotte supprimée"}, 200
