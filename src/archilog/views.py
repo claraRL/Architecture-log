@@ -42,17 +42,24 @@ def view_pot(name: str):
     total_amount = sum(elt.amount for elt in pot.expenses)
     nb_membres = len(liste_membres)
     part_individuelle = round(total_amount / nb_membres if nb_membres > 0 else 0, 2)
+    totaux_par_membre = {membre: 0.0 for membre in liste_membres}
+
+    for depense in pot.expenses:
+        if depense.paid_by in totaux_par_membre:
+            totaux_par_membre[depense.paid_by] += depense.amount
 
     # AJOUT DU FORMULAIRE
     form = ExpenseForm()
+    form.paid_by.choices = [(m, m) for m in liste_membres]
 
     return render_template(
         "details.html",
         pot=pot,
         transactions=transactions,
         membres=liste_membres,
-        total=total_amount,
+        total_general=total_amount,
         part_individuelle=part_individuelle,
+        totaux_par_membre=totaux_par_membre,
         nb_membres=nb_membres,
         form=form
     )
@@ -117,15 +124,18 @@ def delete_pot(cagnotte_name):
 
 @web_ui.route("/pot/<name>/add_expense", methods=["POST"])
 def add_expense_route(name: str):
+    liste_membres = get_members(name)
     form = ExpenseForm()
+    form.paid_by.choices = [(m, m) for m in liste_membres]
     if form.validate_on_submit():
         # Données validées !
         create_expense(name, form.paid_by.data, form.amount.data)
-        logging.info(f"Dépense ajoutée dans {name} par {form.paid_by.data}")
+        flash(f"Dépense de {form.amount.data}€ ajoutée !", "success")
         return redirect(url_for("web_ui.view_pot", name=name))
 
     # Si validation échoue
-    flash("Données invalides. Vérifiez le montant.", "error")
+    print(form.errors)
+    flash(f"Erreur : {form.errors.get('paid_by', ['Montant invalide'])[0]}", "error")
     return redirect(url_for("web_ui.view_pot", name=name))
 
 @web_ui.route("/test-crash")
