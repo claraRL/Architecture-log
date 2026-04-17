@@ -1,8 +1,8 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Mes Cagnottes</title>
+{% extends "layout.html" %}
+
+{% block title %}Mes Cagnottes{% endblock %}
+
+{% block extra_css %}
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -99,57 +99,48 @@
             font-size: 1rem;
         }
     </style>
-</head>
-<body>
+{% endblock %}
+
+{% block content %}
     <h1>Mes Cagnottes</h1>
 
     <div class="pots-container">
-        {% if pots %}
-            {% for pot in pots %}
+        {% for c in cagnottes %}
             <div class="pot-card">
                 <div class="pot-info">
-                    <h3>{{ pot.name }}</h3>
-                    <small><span class="amount-highlight">{{ cagnottes.nb_depenses }}</span>
-                    <span class="reimbursement-text">dépense(s) enregistrée(s)</span></small>
+                    <h3>{{ c.objet }}</h3>
+                    <p>{{ c.nb_depenses }} dépenses enregistrées</p>
                 </div>
-                <!-- C'est ce lien qui permet de "choisir" la cagnotte -->
-                <a href="{{ url_for('view_pot', name=pot.name) }}" class="btn-open">Ouvrir →</a>
+                <a href="{{ url_for('web_ui.view_pot', name=c.objet) }}" class="btn-open">Ouvrir</a>
             </div>
-            {% endfor %}
-        {% else %}
-            <div class="empty-state">
-                <p>Vous n'avez pas encore de cagnotte.</p>
-                <p>Utilisez le formulaire pour créer votre première dépense !</p>
-            </div>
-        {% endif %}
-        <section class="create-pot">
-        <h2>Créer une nouvelle cagnotte</h2>
-            <form action="/pot/create" method="post">
-                <label for="pot_name">
-                    <input type="text" id="pot_name" name="pot_name" placeholder="Nom de la cagnotte" required>
-                </label>
+        {% endfor %}
+
+        <section id="create-pot">
+            <h2>Créer une nouvelle cagnotte</h2>
+            <form action="{{ url_for('web_ui.create_pot') }}" method="post">
+                {{ form.csrf_token }}
+
+                <label>Nom de la cagnotte :</label>
+                {{ form.pot_name(placeholder="Ex: Vacances 2024") }}
 
                 <div id="members-list">
                     <h3>Membres du groupe</h3>
-                    <!-- Le premier membre est souvent celui qui crée la cagnotte -->
-                    <label for="members[]">
-                        <input type="text" id="members[]" name="members[]" placeholder="Nom du membre" required>
-                    </label>
+                    <input type="text" name="members[]" placeholder="Nom du membre" required>
                 </div>
-
                 <button type="button" onclick="addMemberField()">+ Ajouter un membre</button>
 
                 <hr>
-                <h3>Première dépense </h3>
-                <label for="paid_by">
-                    <input type="text" id="paid_by" name="paid_by" placeholder="Qui a payé ?" required>
-                </label>
-                <label for="amount">
-                    <input type="number" id="amount" step="0.01" name="amount" placeholder="Montant (€)" required>
-                </label>
+                <h3>Première dépense</h3>
+                <label>Qui a payé ?</label>
+                {{ form.paid_by(placeholder="Nom") }}
+
+                <label>Montant (€)</label>
+                {{ form.amount(step="0.01") }}
+
                 <button type="submit">Créer la cagnotte</button>
             </form>
         </section>
+    </div>
         <script>
             function addMemberField() {
                 const container = document.getElementById('members-list');
@@ -161,7 +152,4 @@
                 container.appendChild(input);
             }
         </script>
-    </div>
-
-</body>
-</html>
+{% endblock %}
