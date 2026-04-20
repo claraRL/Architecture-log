@@ -120,19 +120,19 @@ Ce tableau récapitule les moyens de connexion pour les différentes interfaces 
 
 Le projet est conteneurisé pour un déploiement facilité :
 
-## 1. Build du package
+### 1. Build du package
 
 ```bash
 uv build
 ```
 
-## 2. Build de l'image
+### 2. Build de l'image
 
 ```bash
 docker build -t archilog-app .
 ```
 
-## 3. Lancement
+### 3. Lancement
 
 ```bash
 docker run -p 8080:8080 archilog-app
