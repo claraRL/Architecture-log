@@ -92,6 +92,6 @@ L'application expose également des endpoints d'API sous le préfixe `/api` séc
 - **`POST /api/pots`** : Créer une nouvelle cagnotte
 - **`DELETE /api/pots/<name>`** : Supprimer une cagnotte (rôle `admin`)
 ---
-![Aperçu de l'application](assets/screenshot.png)
+![Aperçu de l'application](dist/screenshot.png)
 ---
 Course & examples : [https://kathode.neocities.org/data/archilog](https://kathode.neocities.org/data/archilog)
